@@ -1,0 +1,25 @@
+.mantine-RichTextEditor-typographyStylesProvider{
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+}
+
+.mantine-AppShell-main{
+    padding-bottom: 18px;
+}
+.mantine-Textarea-input{
+    font-weight: bold;
+}
+.rte {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.rte-content .mantine-RichTextEditor-content{
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+}
+body{
+    border-radius: 0px !important;
+}

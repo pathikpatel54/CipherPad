@@ -17,6 +17,6 @@ import (
 type Session struct {
 	ID        primitive.ObjectID `json:"_id" bson:"_id,omitempty"`
 	SessionID string             `json:"session-id" bson:"session-id"`
-	Username  string             `json:"username" bson:"username"`
+	Email     string             `json:"email" bson:"email"`
 	Expires   time.Time          `json:"expires" bson:"expires"`
 }

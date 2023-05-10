@@ -1,5 +1,9 @@
 import { forwardRef } from "react";
-import { IconChevronDown, IconExternalLink, IconLogout } from "@tabler/icons";
+import {
+  IconChevronDown,
+  IconExternalLink,
+  IconLogout,
+} from "@tabler/icons-react";
 import { Group, Avatar, Text, Menu, UnstyledButton } from "@mantine/core";
 
 const UserButton = forwardRef(

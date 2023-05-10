@@ -35,7 +35,7 @@ func (nc *NoteController) NotesIndex(c *gin.Context) {
 
 	var notes = []models.Note{}
 
-	cursor, err := nc.db.Collection("notes").Find(nc.ctx, bson.D{{Key: "author", Value: user.Username}})
+	cursor, err := nc.db.Collection("notes").Find(nc.ctx, bson.D{{Key: "author", Value: user.Email}})
 
 	if err != nil {
 		log.Println(err.Error())
@@ -69,7 +69,7 @@ func (nc *NoteController) NewNote(c *gin.Context) {
 
 	note := new(models.Note)
 	c.BindJSON(note)
-	note.Author = user.Username
+	note.Author = user.Email
 
 	result, err := nc.db.Collection("notes").InsertOne(nc.ctx, note)
 
@@ -98,7 +98,7 @@ func (nc *NoteController) DeleteNote(c *gin.Context) {
 	id, _ := primitive.ObjectIDFromHex(c.Param("id"))
 	found := nc.db.Collection("notes").FindOne(nc.ctx, bson.D{{Key: "_id", Value: id}})
 	found.Decode(&foundNote)
-	if foundNote.Author != user.Username {
+	if foundNote.Author != user.Email {
 		c.String(http.StatusUnauthorized, "")
 		return
 	}
@@ -126,7 +126,7 @@ func newUpgrader(user *models.User, nc *NoteController) *websocket.Upgrader {
 		if message.Type == "ping" {
 			c.WriteMessage(messageType, []byte(`{"type": "pong"}`))
 		} else if message.Type == "modify" {
-			_, err := nc.db.Collection("notes").UpdateOne(nc.ctx, bson.D{{Key: "_id", Value: message.Note.ID}, {Key: "author", Value: user.Username}}, bson.D{{Key: "$set", Value: message.Note}})
+			_, err := nc.db.Collection("notes").UpdateOne(nc.ctx, bson.D{{Key: "_id", Value: message.Note.ID}, {Key: "author", Value: user.Email}}, bson.D{{Key: "$set", Value: message.Note}})
 
 			if err != nil {
 				c.WriteMessage(messageType, []byte(strconv.Itoa(http.StatusInternalServerError)))

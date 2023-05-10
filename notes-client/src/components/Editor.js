@@ -19,8 +19,9 @@ import {
 } from "../features/notes/notesSlice";
 import { sendMessage, socket } from "../middlewares/socket";
 import { useEffect, useState } from "react";
-import { IconLockOpen } from "@tabler/icons";
+import { IconLockOpen } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
+import { getEncryptionKey } from "../features/auth/authSlice";
 let flag = false;
 
 const Editor = ({ selected }) => {
@@ -28,8 +29,7 @@ const Editor = ({ selected }) => {
   const [webSocket, setWebSocket] = useState(null);
   const [note, setNote] = useState(notes[selected]);
   const dispatch = useDispatch();
-  const key = useSelector(getNotesKey);
-  const decrypted = useSelector(getNotesDecrypted);
+  const key = useSelector(getEncryptionKey);
 
   const editor = useEditor({
     extensions: [
@@ -76,19 +76,14 @@ const Editor = ({ selected }) => {
     setWebSocket(socket());
   }, []);
 
-
-
   useEffect(() => {
     const content = notes[selected]?.content;
     editor?.commands?.setContent(content);
     setNote(notes[selected]);
   }, [selected, editor]);
 
-
-
   return (
     <>
-      
       {notes.length === 0 ? (
         <></>
       ) : (

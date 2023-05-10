@@ -5,6 +5,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { MantineProvider } from "@mantine/core";
 import Home from "./Home";
 import Landing from "./Landing";
+import { Notifications } from "@mantine/notifications";
 
 const App = () => {
   const dispatch = useDispatch();
@@ -24,10 +25,11 @@ const App = () => {
         withGlobalStyles
         withNormalizeCSS
       >
+        <Notifications position="bottom-center" />
         <div id="App">
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={auth.id ? <Landing /> : <Home />} />
+              <Route path="/" element={auth._id ? <Landing /> : <Home />} />
             </Routes>
           </BrowserRouter>
         </div>

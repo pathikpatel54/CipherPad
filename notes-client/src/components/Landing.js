@@ -11,23 +11,16 @@ import {
   Transition,
   Autocomplete,
   ScrollArea,
-  Modal,
-  TextInput,
-  Button,
 } from "@mantine/core";
 import Head from "./Head";
 import Editor from "./Editor";
 
 import Sidebar from "./Sidebar";
-import { IconLockOpen, IconSearch } from "@tabler/icons";
-import {
-  fetchNotes,
-  getNotesDecrypted,
-  getNotesKey,
-  setDecryptionKey,
-} from "../features/notes/notesSlice";
+import { IconSearch } from "@tabler/icons-react";
+import { fetchNotes, getNotesDecrypted } from "../features/notes/notesSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { useDisclosure } from "@mantine/hooks";
+import { getEncryptionKey } from "../features/auth/authSlice";
 
 const useStyles = createStyles((theme) => ({
   inner: {
@@ -57,8 +50,7 @@ export default function Landing() {
   const [selected, setSelected] = useState(0);
   const { classes } = useStyles();
   const decrypted = useSelector(getNotesDecrypted);
-  const key = useSelector(getNotesKey);
-  const [modalOpened, { open, close }] = useDisclosure(false);
+  const key = useSelector(getEncryptionKey);
   const dispatch = useDispatch();
 
   const onSelectChange = (index) => {
@@ -66,20 +58,10 @@ export default function Landing() {
   };
 
   useEffect(() => {
-    if (decrypted === false) {
-      open();
+    if (decrypted === false && key !== "") {
+      dispatch(fetchNotes(key));
     }
-  }, [key]);
-
-  useEffect(() => {
-    dispatch(fetchNotes(key));
-  }, []);
-
-  const onPasswordSubmit = (e) => {
-    e.preventDefault();
-    dispatch(fetchNotes(key));
-    close();
-  };
+  }, [key, decrypted]);
 
   return (
     <AppShell
@@ -156,28 +138,6 @@ export default function Landing() {
       }
     >
       {decrypted ? <Editor selected={selected} /> : <></>}
-      <Modal
-        opened={modalOpened}
-        title="Enter your password"
-        size={"sm"}
-        withCloseButton={false}
-        centered
-      >
-        <TextInput
-          placeholder="Password"
-          value={key}
-          onChange={(e) => dispatch(setDecryptionKey(e.target.value))}
-        />
-        <Button
-          fullWidth
-          mt={"md"}
-          leftIcon={<IconLockOpen size="1rem" />}
-          onClick={onPasswordSubmit}
-          type="submit"
-        >
-          Unlock Notes
-        </Button>
-      </Modal>
     </AppShell>
   );
 }

@@ -47,7 +47,7 @@ func (uc *UserController) Login(c *gin.Context) {
 		return
 	}
 
-	result := uc.db.Collection("users").FindOne(uc.ctx, bson.M{"username": user.Username})
+	result := uc.db.Collection("users").FindOne(uc.ctx, bson.M{"email": user.Email})
 
 	if result.Err() != nil {
 		log.Println(result.Err().Error())
@@ -80,10 +80,10 @@ func (uc *UserController) SignUp(c *gin.Context) {
 		return
 	}
 
-	result := uc.db.Collection("users").FindOne(uc.ctx, bson.M{"username": user.Username})
+	result := uc.db.Collection("users").FindOne(uc.ctx, bson.M{"email": user.Email})
 
 	if result.Err() == nil {
-		c.String(http.StatusConflict, "user with email %s already exists", user.Username)
+		c.String(http.StatusConflict, "user with email %s already exists", user.Email)
 		return
 	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), 8)
@@ -96,7 +96,7 @@ func (uc *UserController) SignUp(c *gin.Context) {
 
 	user.Password = string(hashedPassword)
 
-	result = uc.db.Collection("users").FindOneAndUpdate(context.Background(), bson.M{"username": user.Username}, bson.M{"$setOnInsert": user}, options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After))
+	result = uc.db.Collection("users").FindOneAndUpdate(context.Background(), bson.M{"email": user.Email}, bson.M{"$setOnInsert": user}, options.FindOneAndUpdate().SetUpsert(true).SetReturnDocument(options.After))
 	if result.Err() != nil {
 		log.Println(result.Err().Error())
 		c.String(http.StatusInternalServerError, "")
@@ -121,7 +121,7 @@ func (uc *UserController) Logout(c *gin.Context) {
 		return
 	}
 
-	_, err := uc.db.Collection("sessions").DeleteMany(uc.ctx, bson.D{{Key: "username", Value: user.Username}})
+	_, err := uc.db.Collection("sessions").DeleteMany(uc.ctx, bson.D{{Key: "email", Value: user.Email}})
 
 	if err != nil {
 		log.Println(err.Error())
@@ -139,7 +139,7 @@ func generateSession(user *models.User, c *gin.Context, uc *UserController) erro
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("session", sessionID, (30 * 24 * 60 * 60), "/", c.Request.Host, false, true)
 
-	_, err := uc.db.Collection("sessions").UpdateOne(uc.ctx, bson.D{{Key: "username", Value: user.Username}}, bson.M{
+	_, err := uc.db.Collection("sessions").UpdateOne(uc.ctx, bson.D{{Key: "email", Value: user.Email}}, bson.M{
 		"$set": bson.M{
 			"session-id": sessionID,
 			"expires":    time.Now().Add(time.Second * 24 * 60 * 60),
@@ -174,11 +174,11 @@ func isLoggedIn(c *gin.Context, db *mongo.Database, ctx context.Context) (bool, 
 
 	if session.Expires.Before(time.Now()) {
 		c.SetCookie("session", "", -1, "/", c.Request.Host, false, true)
-		db.Collection("sessions").DeleteMany(ctx, bson.D{{Key: "username", Value: session.Username}})
+		db.Collection("sessions").DeleteMany(ctx, bson.D{{Key: "email", Value: session.Email}})
 		return false, &models.User{}
 	}
 
-	err = db.Collection("users").FindOne(ctx, bson.D{{Key: "username", Value: session.Username}}).Decode(&user)
+	err = db.Collection("users").FindOne(ctx, bson.D{{Key: "email", Value: session.Email}}).Decode(&user)
 
 	if err != nil {
 		log.Println(err.Error())

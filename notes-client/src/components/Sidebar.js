@@ -1,4 +1,5 @@
 import {
+  Accordion,
   ActionIcon,
   Box,
   createStyles,
@@ -13,7 +14,6 @@ import {
   addNote,
   deleteNote,
   getNotesDecrypted,
-  getNotesKey,
   selectAllNotes,
 } from "../features/notes/notesSlice";
 import { getEncryptionKey } from "../features/auth/authSlice";
@@ -106,7 +106,10 @@ const Sidebar = ({ onSelectChange, selected }) => {
         justifyContent: "space-between",
       })}
     >
-      {note?.title === "" ? "Untitled Note" : note?.title}
+      <div style={{ overflow: "hidden", maxWidth: "250px" }}>
+        {note?.title === "" ? "Untitled Note" : note?.title}
+      </div>
+
       {/* <IconDatabase size="1rem" /> */}
       <Tooltip label="Delete Note" withArrow position="right">
         <ActionIcon
@@ -139,7 +142,23 @@ const Sidebar = ({ onSelectChange, selected }) => {
         </Tooltip>
       </Group>
       <Divider my="xs" variant="solid" />
-      <div className={classes.collections}>{decrypted ? links : ""}</div>
+
+      <Accordion variant="contained" radius="xs" defaultValue="customization">
+        <Accordion.Item value="customization">
+          <Accordion.Control>Customization</Accordion.Control>
+          <Accordion.Panel>
+            <div className={classes.collections}>{decrypted ? links : ""}</div>
+          </Accordion.Panel>
+        </Accordion.Item>
+      </Accordion>
+      <Accordion variant="contained" radius="xs" defaultValue="customization">
+        <Accordion.Item value="customization">
+          <Accordion.Control>Customization</Accordion.Control>
+          <Accordion.Panel>
+            <div className={classes.collections}>{decrypted ? links : ""}</div>
+          </Accordion.Panel>
+        </Accordion.Item>
+      </Accordion>
     </>
   );
 };

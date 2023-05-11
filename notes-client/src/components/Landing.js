@@ -124,7 +124,7 @@ export default function Landing() {
           <div className={classes.inner}>
             <Group>
               <Burger
-                opened={opened}
+                opened={false}
                 onClick={() => setOpened((o) => !o)}
                 size="sm"
                 color={theme.colors.gray[6]}

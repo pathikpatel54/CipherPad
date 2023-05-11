@@ -1,73 +1,81 @@
-import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import {
-  setConnection,
-  closeConnection,
-  setStatus,
-  addMessage,
-} from "../features/companion/websocketSlice";
+// useWebSocket.js
+import { useEffect, useRef, useState, useCallback } from "react";
+import { encryptData } from "../middlewares/crypto";
 
-import { useRef } from "react";
+const getWebSocketURL = (path) => {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const host = window.location.host;
+  return `${protocol}//${host}${path}`;
+};
 
-const useWebSocket = (path = "/") => {
-  const dispatch = useDispatch();
-  const status = useSelector((state) => state.websocket.status);
-  const messages = useSelector((state) => state.websocket.messages);
+const useWebSocket = (path, onMessage) => {
+  const url = getWebSocketURL(path);
   const wsRef = useRef(null);
 
-  useEffect(() => {
-    if (status === "disconnected") {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const domain = window.location.host;
-      const url = `${protocol}//${domain}${path}`;
+  const [ready, setReady] = useState(false);
+  const [queue, setQueue] = useState([]);
 
-      const ws = new WebSocket(url);
-
-      ws.onopen = () => {
-        dispatch(setConnection(ws));
-        dispatch(setStatus("connected"));
-      };
-
-      ws.onmessage = (message) => {
-        dispatch(addMessage(message.data));
-      };
-
-      ws.onclose = () => {
-        dispatch(setStatus("disconnected"));
-        dispatch(closeConnection());
-      };
-
-      ws.onerror = () => {
-        dispatch(setStatus("error"));
-        dispatch(closeConnection());
-      };
-
-      wsRef.current = ws;
-    }
-  }, [status, dispatch, path]);
-
-  useEffect(() => {
-    if (status === "connected" && wsRef.current) {
-      const pingInterval = setInterval(() => {
-        if (wsRef.current.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ type: "ping" }));
-        }
-      }, 5000);
-
-      return () => {
-        clearInterval(pingInterval);
-      };
-    }
-  }, [status, wsRef]);
-
-  useEffect(() => {
-    return () => {
-      dispatch(setStatus("disconnected"));
-      dispatch(closeConnection());
+  // Reconnect function
+  const reconnect = useCallback(() => {
+    wsRef.current = new WebSocket(url);
+    wsRef.current.onopen = () => {
+      setReady(true);
+      // Send all queued messages
+      queue.forEach((message) => send(message));
+      setQueue([]);
     };
-  }, [dispatch]);
 
-  return { status, messages };
+    wsRef.current.onclose = () => {
+      setReady(false);
+      setTimeout(reconnect, 5000);
+    };
+
+    wsRef.current.onmessage = (event) => {
+      if (onMessage) {
+        onMessage(event.data);
+      }
+    };
+  }, [url, queue, onMessage]);
+  const reconnectRef = useRef(reconnect);
+  useEffect(() => {
+    reconnectRef.current = reconnect;
+  }, [reconnect]);
+
+  useEffect(() => {
+    reconnectRef.current();
+
+    const pingInterval = setInterval(() => {
+      if (wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "ping" }));
+      }
+    }, 5000);
+
+    return () => {
+      clearInterval(pingInterval);
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, []);
+
+  const send = async (message, password) => {
+    if (ready) {
+      const encryptedMessage = {
+        ...message,
+        new: {
+          ...message.new,
+          title: await encryptData(message?.new?.title, password),
+          content: await encryptData(message?.new?.content, password),
+        },
+      };
+      wsRef.current.send(JSON.stringify(encryptedMessage));
+    } else {
+      // If not ready, add the message to the queue
+      setQueue([...queue, message]);
+    }
+  };
+
+  return { ready, send };
 };
 
 export default useWebSocket;

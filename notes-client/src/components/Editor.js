@@ -7,29 +7,27 @@ import TextAlign from "@tiptap/extension-text-align";
 import Superscript from "@tiptap/extension-superscript";
 import SubScript from "@tiptap/extension-subscript";
 import Image from "@tiptap/extension-image";
-import { Button, Modal, TextInput, Textarea } from "@mantine/core";
+import { Textarea } from "@mantine/core";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  fetchNotes,
-  getNotesDecrypted,
-  getNotesKey,
-  selectAllNotes,
-  setDecryptionKey,
-  syncNote,
-} from "../features/notes/notesSlice";
-import { sendMessage, socket } from "../middlewares/socket";
+import { selectAllNotes, syncNote } from "../features/notes/notesSlice";
+import useWebSocket from "../hooks/useWebSocket";
 import { useEffect, useState } from "react";
-import { IconLockOpen } from "@tabler/icons-react";
-import { useDisclosure } from "@mantine/hooks";
 import { getEncryptionKey } from "../features/auth/authSlice";
 let flag = false;
 
 const Editor = ({ selected }) => {
   const notes = useSelector(selectAllNotes);
-  const [webSocket, setWebSocket] = useState(null);
   const [note, setNote] = useState(notes[selected]);
   const dispatch = useDispatch();
   const key = useSelector(getEncryptionKey);
+
+  const handleIncomingMessage = (message) => {
+    console.log(message);
+  };
+  const { ready, send } = useWebSocket(
+    "/api/notes/socket",
+    handleIncomingMessage
+  );
 
   const editor = useEditor({
     extensions: [
@@ -69,12 +67,8 @@ const Editor = ({ selected }) => {
       type: "modify",
       new: note,
     };
-    sendMessage(webSocket, message, key);
+    send(message, key);
   }, [note?.content, note?.title]);
-
-  useEffect(() => {
-    setWebSocket(socket());
-  }, []);
 
   useEffect(() => {
     const content = notes[selected]?.content;
@@ -87,7 +81,7 @@ const Editor = ({ selected }) => {
       {notes.length === 0 ? (
         <></>
       ) : (
-        <RichTextEditor editor={editor} mr={"md"} className="rte">
+        <RichTextEditor editor={editor} className="rte">
           <RichTextEditor.Toolbar>
             <Textarea
               placeholder="Untitled Note"
@@ -103,6 +97,7 @@ const Editor = ({ selected }) => {
                   title: event.target.value,
                 }));
               }}
+              style={{ overflow: "hidden", maxWidth: "800px" }}
             />
           </RichTextEditor.Toolbar>
           <RichTextEditor.Toolbar sticky stickyOffset={60}>
@@ -113,7 +108,7 @@ const Editor = ({ selected }) => {
               <RichTextEditor.Strikethrough />
               <RichTextEditor.ClearFormatting />
               <RichTextEditor.Highlight />
-              <RichTextEditor.Code />
+              <RichTextEditor.CodeBlock />
             </RichTextEditor.ControlsGroup>
 
             <RichTextEditor.ControlsGroup>
@@ -124,7 +119,6 @@ const Editor = ({ selected }) => {
             </RichTextEditor.ControlsGroup>
 
             <RichTextEditor.ControlsGroup>
-              <RichTextEditor.CodeBlock />
               <RichTextEditor.Blockquote />
               <RichTextEditor.Hr />
               <RichTextEditor.BulletList />

@@ -26,7 +26,6 @@ export const fetchNotes = createAsyncThunk(
 export const addNote = createAsyncThunk(
   "notes/addNote",
   async ({ newNote: request, key: password }) => {
-    console.log(password);
     const encryptedRequest = {
       ...request,
       content: await encryptData(request.content, password),

@@ -12,5 +12,5 @@ type Note struct {
 	Title       string             `json:"title" bson:"title"`
 	Content     string             `json:"content" bson:"content"`
 	Author      string             `json:"author" bson:"author,omitempty"`
-	Category    string             `json:"category" bson:"category,omitempty"`
+	Folder      string             `json:"folder,omitempty" bson:"folder,omitempty"`
 }

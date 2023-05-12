@@ -5,6 +5,12 @@
     overflow: auto;
     flex-grow: 1;
 }
+.mantine-Accordion-content{
+    padding-right: 0px;
+    padding-left: 0px;
+    padding-top: 0px;
+    padding-bottom: 0px;
+}
 
 .mantine-AppShell-main{
     padding-bottom: 18px;

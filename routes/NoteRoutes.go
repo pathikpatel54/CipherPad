@@ -14,6 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type NoteController struct {
@@ -33,30 +34,67 @@ func (nc *NoteController) NotesIndex(c *gin.Context) {
 		return
 	}
 
-	var notes = []models.Note{}
-
-	cursor, err := nc.db.Collection("notes").Find(nc.ctx, bson.D{{Key: "author", Value: user.Email}})
-
+	// Fetch all folders
+	folderCursor, err := nc.db.Collection("folders").Find(nc.ctx, bson.D{{Key: "author", Value: user.Email}})
 	if err != nil {
 		log.Println(err.Error())
 		c.String(http.StatusInternalServerError, "")
 		return
 	}
 
-	for cursor.Next(nc.ctx) {
-		var note models.Note
+	folderNotesList := []models.FolderNotes{}
 
-		err := cursor.Decode(&note)
+	// Iterate through all folders
+	for folderCursor.Next(nc.ctx) {
+		var folder models.Folder
+
+		err := folderCursor.Decode(&folder)
 
 		if err != nil {
 			log.Println(err.Error())
 			c.String(http.StatusInternalServerError, "")
 			return
 		}
-		notes = append(notes, note)
+
+		// Fetch all notes for the current folder
+		noteCursor, err := nc.db.Collection("notes").Find(nc.ctx, bson.D{
+			{Key: "author", Value: user.Email},
+			{Key: "folder", Value: folder.Name},
+		})
+
+		if err != nil {
+			log.Println(err.Error())
+			c.String(http.StatusInternalServerError, "")
+			return
+		}
+
+		notes := []models.Note{}
+
+		// Iterate through all notes for the current folder
+		for noteCursor.Next(nc.ctx) {
+			var note models.Note
+
+			err := noteCursor.Decode(&note)
+
+			if err != nil {
+				log.Println(err.Error())
+				c.String(http.StatusInternalServerError, "")
+				return
+			}
+
+			notes = append(notes, note)
+		}
+
+		// Create a new FolderNotes
+		folderNotes := models.FolderNotes{
+			Name:  folder.Name,
+			Notes: notes,
+		}
+
+		folderNotesList = append(folderNotesList, folderNotes)
 	}
 
-	c.JSON(http.StatusOK, notes)
+	c.JSON(http.StatusOK, folderNotesList)
 }
 
 func (nc *NoteController) NewNote(c *gin.Context) {
@@ -71,19 +109,42 @@ func (nc *NoteController) NewNote(c *gin.Context) {
 	c.BindJSON(note)
 	note.Author = user.Email
 
-	result, err := nc.db.Collection("notes").InsertOne(nc.ctx, note)
+	if note.Folder == "" {
+		note.Folder = "root"
+	}
 
+	// Upsert a folder with the given name, if it doesn't exist.
+	_, err := nc.db.Collection("folders").UpdateOne(
+		nc.ctx,
+		bson.D{{Key: "name", Value: note.Folder}},
+		bson.D{{Key: "$setOnInsert", Value: bson.D{{Key: "author", Value: user.Email}}}},
+		options.Update().SetUpsert(true),
+	)
 	if err != nil {
-		log.Println(http.StatusInternalServerError)
+		log.Println("Error upserting Folder: ", err)
 		c.String(http.StatusInternalServerError, "")
 		return
 	}
 
+	// Create the new Note
+	result, err := nc.db.Collection("notes").InsertOne(nc.ctx, note)
+	if err != nil {
+		log.Println("Error creating new Note: ", err)
+		c.String(http.StatusInternalServerError, "")
+		return
+	}
+
+	// Fetch the newly created Note
 	inserted := nc.db.Collection("notes").FindOne(nc.ctx, bson.D{{Key: "_id", Value: result.InsertedID}})
 
 	var insertedNote models.Note
+	err = inserted.Decode(&insertedNote)
+	if err != nil {
+		log.Println("Error decoding inserted Note: ", err)
+		c.String(http.StatusInternalServerError, "")
+		return
+	}
 
-	inserted.Decode(&insertedNote)
 	c.JSON(http.StatusOK, insertedNote)
 }
 

@@ -53,8 +53,8 @@ export default function Landing() {
   const key = useSelector(getEncryptionKey);
   const dispatch = useDispatch();
 
-  const onSelectChange = (index) => {
-    setSelected(index);
+  const onSelectChange = (id) => {
+    setSelected(id);
   };
 
   useEffect(() => {

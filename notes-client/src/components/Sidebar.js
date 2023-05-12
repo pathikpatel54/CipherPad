@@ -1,14 +1,23 @@
 import {
   Accordion,
   ActionIcon,
+  Autocomplete,
   Box,
+  Button,
   createStyles,
   Divider,
   Group,
+  Modal,
+  Stack,
   Text,
+  TextInput,
   Tooltip,
 } from "@mantine/core";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import {
+  IconNote,
+  IconPlus,
+  IconTrash,
+} from "@tabler/icons-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addNote,
@@ -17,6 +26,8 @@ import {
   selectAllNotes,
 } from "../features/notes/notesSlice";
 import { getEncryptionKey } from "../features/auth/authSlice";
+import { IconFolderFilled } from "@tabler/icons-react";
+import { useEffect, useState } from "react";
 
 const useStyles = createStyles((theme) => ({
   link: {
@@ -26,12 +37,9 @@ const useStyles = createStyles((theme) => ({
     color: theme.colorScheme === "dark" ? theme.colors.dark[0] : theme.black,
     lineHeight: 1.2,
     fontSize: theme.fontSizes.sm,
-    padding: theme.spacing.md,
+    padding: theme.spacing.sm,
     borderTopRightRadius: 0,
     borderBottomRightRadius: 0,
-    borderLeft: `${"2px"} solid ${
-      theme.colorScheme === "dark" ? theme.colors.dark[4] : theme.colors.gray[3]
-    }`,
 
     "&:hover": {
       backgroundColor:
@@ -65,52 +73,99 @@ const useStyles = createStyles((theme) => ({
 
 const Sidebar = ({ onSelectChange, selected }) => {
   const { classes, cx } = useStyles();
-  const notes = useSelector(selectAllNotes);
+  const folders = useSelector(selectAllNotes);
   const dispatch = useDispatch();
   const key = useSelector(getEncryptionKey);
   const decrypted = useSelector(getNotesDecrypted);
-
-  console.log(decrypted);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [newNoteData, setNewNoteData] = useState({ title: "", folder: "" });
+  const foldersWithNotes = folders.filter((folder) => folder.notes.length > 0);
   const onCreateNew = (e) => {
-    console.log("This");
-    onSelectChange(notes.length);
+    setModalOpen(true);
+  };
+
+  const generateFolderData = () => {
+    return foldersWithNotes.map((folder) => ({
+      value: folder.name,
+      label: folder.name,
+    }));
+  };
+
+  const handleCreateNote = () => {
     const newNote = {
       content: "",
-      title: "",
+      title: newNoteData.title,
       datecreated: new Date().toISOString(),
+      folder: newNoteData.folder,
     };
     dispatch(addNote({ newNote, key }));
+    setModalOpen(false);
+    setNewNoteData({ title: "", folder: "" });
   };
+
+  useEffect(() => {
+    if (folders.length > 0 && folders[0].notes.length > 0) {
+      onSelectChange(folders[0].notes[0]?.id);
+    }
+  }, [folders]);
 
   const onDeleteClick = (e, id) => {
-    onSelectChange(0);
     e.stopPropagation();
     dispatch(deleteNote(id));
+    if (folders.length > 0 && folders[0].notes.length > 0) {
+      onSelectChange(folders[0].notes[0]?.id);
+    }
   };
 
-  const links = notes?.map((note, index) => (
+  const renderNote = (note) => (
     <Box
       component="a"
-      href={"#"}
+      href="#"
       onClick={(event) => {
         event.preventDefault();
-        onSelectChange(index);
+        onSelectChange(note?.id);
       }}
       key={note?.id}
       className={cx(classes.link, {
-        [classes.linkActive]: selected === index,
+        [classes.linkActive]: selected === note.id,
       })}
-      sx={(theme) => ({
-        paddingLeft: theme.spacing.md,
-        display: "flex",
-        justifyContent: "space-between",
-      })}
+      sx={(theme) =>
+        note.folder === "root"
+          ? {
+              paddingLeft: "20px",
+              paddingRight: "19px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }
+          : {
+              paddingLeft: "40px",
+              paddingRight: "19px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }
+      }
     >
-      <div style={{ overflow: "hidden", maxWidth: "250px" }}>
-        {note?.title === "" ? "Untitled Note" : note?.title}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-start",
+          alignItems: "center",
+        }}
+      >
+        <IconNote />
+        <div
+          style={{
+            overflow: "hidden",
+            maxWidth: "250px",
+            marginLeft: "14px",
+          }}
+        >
+          {note?.title === "" ? "Untitled Note" : note?.title}
+        </div>
       </div>
 
-      {/* <IconDatabase size="1rem" /> */}
       <Tooltip label="Delete Note" withArrow position="right">
         <ActionIcon
           variant="default"
@@ -121,7 +176,7 @@ const Sidebar = ({ onSelectChange, selected }) => {
         </ActionIcon>
       </Tooltip>
     </Box>
-  ));
+  );
 
   return (
     <>
@@ -129,7 +184,6 @@ const Sidebar = ({ onSelectChange, selected }) => {
         <Text size="md" weight={500} color="dimmed">
           Notes
         </Text>
-
         <Tooltip
           label="Create new note"
           withArrow
@@ -141,24 +195,70 @@ const Sidebar = ({ onSelectChange, selected }) => {
           </ActionIcon>
         </Tooltip>
       </Group>
-      <Divider my="xs" variant="solid" />
+      <Divider my="xs" variant="solid" style={{ marginBottom: "0px" }} />
+      {[...foldersWithNotes]
+        .sort((a, b) => (a.name === "root" ? 1 : -1))
+        .map((folder) =>
+          folder.name === "root" ? (
+            folder.notes.map(renderNote)
+          ) : (
+            <Accordion variant="default" radius="xs" key={folder.name}>
+              <Accordion.Item value={folder.name}>
+                <Accordion.Control icon={<IconFolderFilled />}>
+                  {folder.name}
+                </Accordion.Control>
+                <Accordion.Panel pr={0}>
+                  {decrypted ? folder.notes.map(renderNote) : ""}
+                </Accordion.Panel>
+              </Accordion.Item>
+            </Accordion>
+          )
+        )}
 
-      <Accordion variant="contained" radius="xs" defaultValue="customization">
-        <Accordion.Item value="customization">
-          <Accordion.Control>Customization</Accordion.Control>
-          <Accordion.Panel>
-            <div className={classes.collections}>{decrypted ? links : ""}</div>
-          </Accordion.Panel>
-        </Accordion.Item>
-      </Accordion>
-      <Accordion variant="contained" radius="xs" defaultValue="customization">
-        <Accordion.Item value="customization">
-          <Accordion.Control>Customization</Accordion.Control>
-          <Accordion.Panel>
-            <div className={classes.collections}>{decrypted ? links : ""}</div>
-          </Accordion.Panel>
-        </Accordion.Item>
-      </Accordion>
+      <Modal
+        opened={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Create new note"
+      >
+        <Stack>
+          <TextInput
+            label="Title"
+            placeholder="Enter note title"
+            value={newNoteData.title}
+            onChange={(event) =>
+              setNewNoteData({ ...newNoteData, title: event.target.value })
+            }
+            required
+            fullWidth
+          />
+          <Autocomplete
+            dropdownPosition="bottom"
+            label="Folder"
+            placeholder="Enter folder name"
+            data={generateFolderData()}
+            value={newNoteData.folder}
+            onChange={(value) =>
+              setNewNoteData({ ...newNoteData, folder: value })
+            }
+            required
+            fullWidth
+            withinPortal
+          />
+          <Group position="center">
+            <Button
+              variant="outline"
+              color="gray"
+              onClick={() => setModalOpen(false)}
+              style={{ marginRight: "10px" }}
+            >
+              Cancel
+            </Button>
+            <Button variant="filled" color="blue" onClick={handleCreateNote}>
+              Create Note
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </>
   );
 };

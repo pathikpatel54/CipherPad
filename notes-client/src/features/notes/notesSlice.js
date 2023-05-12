@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { decryptData, encryptData } from "../../middlewares/crypto";
+import { NodeType } from "@tiptap/pm/model";
 
 const initialState = {
   notes: [],
@@ -48,23 +49,37 @@ export const deleteNote = createAsyncThunk("notes/deleteNote", async (id) => {
 
 const updateNote = (state, action) => {
   const { selected, content } = action.payload;
-  if (state.notes[selected] != null) {
-    state.notes[selected] = content;
+  const folderName = content.folder;
+  // Find the FolderNotes with the given folderName
+  const folderNotes = state.notes.find((folder) => folder.name === folderName);
+
+  if (folderNotes) {
+    // Find the index of the note with the given selected ID
+    const noteIndex = folderNotes.notes.findIndex(
+      (note) => note.id === selected
+    );
+    if (noteIndex !== -1) {
+      // Update the note content
+      folderNotes.notes[noteIndex] = content;
+    }
   }
 };
 
-const setKey = (state, action) => {
-  const password = action.payload;
-  state.key = password;
-};
-
-const decryptNotes = async (notes, password) => {
+const decryptNotes = async (folderNotesList, password) => {
   return Promise.all(
-    notes.map(async (note) => {
+    folderNotesList.map(async (folderNotes) => {
+      const decryptedNotes = await Promise.all(
+        folderNotes.notes.map(async (note) => {
+          return {
+            ...note,
+            content: await decryptData(note.content, password),
+            title: await decryptData(note.title, password),
+          };
+        })
+      );
       return {
-        ...note,
-        content: await decryptData(note.content, password),
-        title: await decryptData(note.title, password),
+        ...folderNotes,
+        notes: decryptedNotes,
       };
     })
   );
@@ -75,7 +90,6 @@ const notesSlice = createSlice({
   initialState,
   reducers: {
     updateNote,
-    setKey,
   },
   extraReducers(builder) {
     builder
@@ -101,7 +115,19 @@ const notesSlice = createSlice({
       })
       .addCase(addNote.fulfilled, (state, action) => {
         state.status = "fulfilled";
-        state.notes.push(action.payload);
+        const folderNotes = state.notes.find(
+          (folder) => folder.name === action.payload.folder
+        );
+        if (folderNotes) {
+          // Existing folder, just push the new note
+          folderNotes.notes.push(action.payload);
+        } else {
+          // New folder, create a new folder with the new note
+          state.notes.push({
+            name: action.payload.folder,
+            notes: [action.payload],
+          });
+        }
       })
       .addCase(addNote.rejected, (state, action) => {
         state.status = "rejected";
@@ -112,7 +138,11 @@ const notesSlice = createSlice({
       })
       .addCase(deleteNote.fulfilled, (state, action) => {
         state.status = "fulfilled";
-        state.notes = state.notes.filter((note) => note.id !== action.payload);
+        state.notes.forEach((folderNotes) => {
+          folderNotes.notes = folderNotes.notes.filter(
+            (note) => note.id !== action.payload
+          );
+        });
       })
       .addCase(deleteNote.rejected, (state, action) => {
         state.status = "rejected";

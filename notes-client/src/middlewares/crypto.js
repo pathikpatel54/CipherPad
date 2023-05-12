@@ -32,7 +32,6 @@ const deriveKey = (passwordKey, salt, keyUsage) =>
   );
 
 export async function encryptData(secretData, password) {
-  console.log(password);
 
   try {
     const salt = window.crypto.getRandomValues(new Uint8Array(16));
@@ -64,7 +63,6 @@ export async function encryptData(secretData, password) {
 }
 
 export async function decryptData(encryptedData, password) {
-  console.log(password);
   try {
     const encryptedDataBuff = base64_to_buf(encryptedData);
     const salt = encryptedDataBuff.slice(0, 16);

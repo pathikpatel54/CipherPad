@@ -1,3 +1,7 @@
+import { useRef, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { selectAllNotes, syncNote } from "../features/notes/notesSlice";
+import { getEncryptionKey } from "../features/auth/authSlice";
 import { RichTextEditor, Link } from "@mantine/tiptap";
 import { useEditor } from "@tiptap/react";
 import Highlight from "@tiptap/extension-highlight";
@@ -8,22 +12,20 @@ import Superscript from "@tiptap/extension-superscript";
 import SubScript from "@tiptap/extension-subscript";
 import Image from "@tiptap/extension-image";
 import { Textarea } from "@mantine/core";
-import { useDispatch, useSelector } from "react-redux";
-import { selectAllNotes, syncNote } from "../features/notes/notesSlice";
 import useWebSocket from "../hooks/useWebSocket";
-import { useEffect, useState } from "react";
-import { getEncryptionKey } from "../features/auth/authSlice";
-let flag = false;
+import useDebounce from "../hooks/useDebounce";
 
 const Editor = ({ selected }) => {
+  const [note, setNote] = useState(null);
   const notes = useSelector(selectAllNotes);
-  const [note, setNote] = useState(notes[selected]);
   const dispatch = useDispatch();
   const key = useSelector(getEncryptionKey);
+  const editorInitialized = useRef(false);
 
   const handleIncomingMessage = (message) => {
     console.log(message);
   };
+
   const { ready, send } = useWebSocket(
     "/api/notes/socket",
     handleIncomingMessage
@@ -50,35 +52,42 @@ const Editor = ({ selected }) => {
   });
 
   useEffect(() => {
-    setNote(notes[selected]);
-    if (flag === false && editor != null) {
-      const content = notes[selected]?.content;
-      editor?.commands?.setContent(content);
-      flag = true;
+    const selectedNote = notes
+      .flatMap((folder) => folder.notes)
+      .find((note) => note.id === selected);
+    if (selectedNote) {
+      setNote(selectedNote);
+      if (editor) {
+        // Update editor content only when the selected note changes
+        if (selectedNote.content !== editor.getHTML()) {
+          editor.commands.setContent(selectedNote.content);
+        }
+      }
+    } else {
+      setNote(null);
+      if (editor) {
+        editor.commands.setContent("");
+      }
     }
-    if (editor?.getHTML() !== note?.content) {
-      editor?.commands?.setContent(note?.content);
-    }
-  }, [notes, note]);
+  }, [selected, notes, editor]);
+
+  const debouncedContent = useDebounce(note?.content, 1000);
+  const debouncedTitle = useDebounce(note?.title, 1);
 
   useEffect(() => {
-    dispatch(syncNote({ selected, content: note }));
-    const message = {
-      type: "modify",
-      new: note,
-    };
-    send(message, key);
-  }, [note?.content, note?.title]);
-
-  useEffect(() => {
-    const content = notes[selected]?.content;
-    editor?.commands?.setContent(content);
-    setNote(notes[selected]);
-  }, [selected, editor]);
+    if (note) {
+      dispatch(syncNote({ selected, content: note }));
+      const message = {
+        type: "modify",
+        new: note,
+      };
+      send(message, key);
+    }
+  }, [debouncedContent, debouncedTitle]);
 
   return (
     <>
-      {notes.length === 0 ? (
+      {!note ? (
         <></>
       ) : (
         <RichTextEditor editor={editor} className="rte">
@@ -90,7 +99,7 @@ const Editor = ({ selected }) => {
               size={"xl"}
               maxRows={1}
               mah={"50px"}
-              value={note ? note.title : ""}
+              value={note.title || ""}
               onChange={(event) => {
                 setNote((prev) => ({
                   ...prev,

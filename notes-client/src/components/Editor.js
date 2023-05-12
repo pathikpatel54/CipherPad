@@ -16,7 +16,7 @@ import TextStyle from "@tiptap/extension-text-style";
 import { Input, Modal, Text } from "@mantine/core";
 import useWebSocket from "../hooks/useWebSocket";
 import useDebounce from "../hooks/useDebounce";
-import { IconCheck, IconColorPicker } from "@tabler/icons-react";
+import { IconCheck, IconColorPicker, IconWand } from "@tabler/icons-react";
 import {
   getChatgptError,
   getChatgptStatus,
@@ -183,9 +183,8 @@ const Editor = ({ selected }) => {
                 }}
                 aria-label="Get AI Assistance"
                 title="Get AI Assistance"
-                p={10}
               >
-                Get AI Assistance
+                <IconWand stroke={1.5} size="1rem" />
               </RichTextEditor.Control>
               <RichTextEditor.Bold />
               <RichTextEditor.Italic />

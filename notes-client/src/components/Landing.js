@@ -22,6 +22,7 @@ import { IconClearAll, IconSearch, IconX } from "@tabler/icons-react";
 import { fetchNotes, getNotesDecrypted } from "../features/notes/notesSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { getEncryptionKey } from "../features/auth/authSlice";
+import Logo from "./Logo";
 
 const useStyles = createStyles((theme) => ({
   inner: {
@@ -130,13 +131,13 @@ export default function Landing() {
           <div className={classes.inner}>
             <Group>
               <Burger
-                opened={false}
+                opened={opened}
                 onClick={() => setOpened((o) => !o)}
                 size="sm"
                 color={theme.colors.gray[6]}
               />
 
-              <Image src="logo.svg" maw={150} />
+              <Logo />
             </Group>
             <Head />
           </div>

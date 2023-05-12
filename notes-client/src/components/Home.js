@@ -22,6 +22,7 @@ import {
   IconLockSquare,
   IconReceiptOff,
   IconRefresh,
+  IconWand,
 } from "@tabler/icons-react";
 import { useRef } from "react";
 
@@ -30,7 +31,13 @@ const features = [
     icon: IconLockSquare,
     title: "End to end Encrypted",
     description:
-      "All notes are encrypted on your device before they are sent to the server. Even the service provider can't access the notes because only the user holds the decryption keys.",
+      "All notes are encrypted with strong aes-256 encryption algorithm on your device before they are sent to the server. Even the service provider can't access the notes because only the user holds the decryption keys.",
+  },
+  {
+    icon: IconWand,
+    title: "Built in AI Assistance",
+    description:
+      "Our notetaking app is uniquely designed with a suite of AI-powered features, aimed to enhance your productivity and organization.",
   },
   {
     icon: IconRefresh,
@@ -43,12 +50,6 @@ const features = [
     title: "Rich-text editor",
     description:
       "Support for different fonts, headings, bullet points, checkboxes, images, tables, hyperlinks, etc.",
-  },
-  {
-    icon: IconReceiptOff,
-    title: "Free and open source",
-    description:
-      "This app is published under MIT license, you can use CypherPad in any project",
   },
 ];
 
@@ -221,7 +222,7 @@ export default function Home() {
 
   return (
     <div>
-      <Header height={{ base: 60, md: 60 }} p="xl" mb={120}>
+      <Header height={{ base: 60, md: 60 }} p="xl" mb={70}>
         <div className={classes.inner}>
           <Group>
             <Image src="logo.svg" maw={150} />
@@ -232,9 +233,8 @@ export default function Home() {
 
       <Paper
         shadow="xs"
-        p="md"
+        p="xl"
         style={{
-          borderTop: "1px solid #2C2E33",
           borderBottom: "1px solid #2C2E33",
         }}
       >
@@ -253,9 +253,9 @@ export default function Home() {
           </h1>
 
           <Text className={classes.description} color="dimmed">
-            Build fully functional accessible web applications with ease –
-            Mantine includes more than 100 customizable components and hooks to
-            cover you in any situation
+            Unleash the power of privacy and AI assistance in your notetaking –
+            our app features end-to-end encryption for secure note storage,
+            coupled with a suite of AI-powered tools that adapt to your needs.
           </Text>
 
           <Group className={classes.controls}>
@@ -301,13 +301,18 @@ export default function Home() {
                   privacy at its core.
                 </Title>
                 <Text c="dimmed">
-                  Available across multiple platforms, Our Secure Notepad is
-                  your go-to solution for secure, private note-taking. With a
-                  user-friendly interface, dark mode for low-light conditions,
-                  and quick search options, your note-taking experience will be
-                  smoother than ever. Join us in redefining note-taking with a
-                  secure, encrypted approach. With Your Secure Notepad, your
-                  notes are private and always within reach.
+                  Availabel on multiple platforms our revolutionary notetaking
+                  application, designed with your privacy and efficiency in
+                  mind. This application seamlessly blends advanced end-to-end
+                  encryption with the power of Artificial Intelligence, ensuring
+                  your notes remain confidential while helping you organize and
+                  optimize your ideas. With our app, you can effortlessly
+                  capture thoughts, plan projects, and more, all under the
+                  umbrella of top-tier security. The integrated AI Assistance
+                  further enhances your notetaking experience, providing
+                  real-time suggestions and intelligent content. It's more than
+                  just a notetaking app—it's your personal assistant and your
+                  vault, all in one secure platform.
                 </Text>
               </Col>
               <Col span={12} md={7}>

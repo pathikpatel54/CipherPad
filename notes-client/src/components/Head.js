@@ -109,7 +109,7 @@ const Head = forwardRef((props, ref) => {
         title: "Authentication successfull",
         message: "Authentication is successfull, you are being redirected",
         icon: <IconCheck size="1rem" />,
-        autoClose: 2000,
+        autoClose: 1000,
       });
       form.reset();
       close();
@@ -120,7 +120,7 @@ const Head = forwardRef((props, ref) => {
         title: "Authentication failed",
         message: "Authentication has failed, please try again",
         icon: <IconCheck size="1rem" />,
-        autoClose: 2000,
+        autoClose: 1000,
       });
     }
   }, [authStatus]);

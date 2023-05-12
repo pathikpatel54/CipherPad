@@ -94,27 +94,28 @@ const notesSlice = createSlice({
   extraReducers(builder) {
     builder
       .addCase(fetchNotes.pending, (state) => {
-        state.status = "pending";
+        state.status = "fetching";
       })
       .addCase(fetchNotes.fulfilled, (state, action) => {
         if (action.payload[0]?.content === "Error") {
           state.decrypted = false;
-          state.status = "fulfilled";
+          state.status = "fetched";
+          alert(action.payload[0]?.content);
         } else {
-          state.status = "fulfilled";
+          state.status = "fetched";
           state.notes = action.payload;
           state.decrypted = true;
         }
       })
       .addCase(fetchNotes.rejected, (state, action) => {
-        state.status = "rejected";
+        state.status = "fetchRejected";
         state.error = action.error.message;
       })
       .addCase(addNote.pending, (state) => {
-        state.status = "pending";
+        state.status = "adding";
       })
       .addCase(addNote.fulfilled, (state, action) => {
-        state.status = "fulfilled";
+        state.status = "added";
         const folderNotes = state.notes.find(
           (folder) => folder.name === action.payload.folder
         );
@@ -130,14 +131,14 @@ const notesSlice = createSlice({
         }
       })
       .addCase(addNote.rejected, (state, action) => {
-        state.status = "rejected";
+        state.status = "addRejected";
         state.error = action.error.message;
       })
       .addCase(deleteNote.pending, (state) => {
-        state.status = "pending";
+        state.status = "deleting";
       })
       .addCase(deleteNote.fulfilled, (state, action) => {
-        state.status = "fulfilled";
+        state.status = "deleted";
         state.notes.forEach((folderNotes) => {
           folderNotes.notes = folderNotes.notes.filter(
             (note) => note.id !== action.payload
@@ -145,7 +146,7 @@ const notesSlice = createSlice({
         });
       })
       .addCase(deleteNote.rejected, (state, action) => {
-        state.status = "rejected";
+        state.status = "deleteRejected";
         state.error = action.error.message;
       });
   },

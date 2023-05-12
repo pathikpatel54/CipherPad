@@ -32,7 +32,6 @@ const deriveKey = (passwordKey, salt, keyUsage) =>
   );
 
 export async function encryptData(secretData, password) {
-
   try {
     const salt = window.crypto.getRandomValues(new Uint8Array(16));
     const iv = window.crypto.getRandomValues(new Uint8Array(12));
@@ -58,6 +57,7 @@ export async function encryptData(secretData, password) {
     return base64Buff;
   } catch (e) {
     console.log(`Error - ${e}`);
+    alert(`Error - ${e}`);
     return "Error";
   }
 }
@@ -81,6 +81,8 @@ export async function decryptData(encryptedData, password) {
     return dec.decode(decryptedContent);
   } catch (e) {
     console.log(`Error - ${e}`);
+    alert(`Error - ${e}`);
+
     return "Error";
   }
 }

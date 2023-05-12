@@ -137,7 +137,7 @@ func generateSession(user *models.User, c *gin.Context, uc *UserController) erro
 	sessionID, _ := utils.GenerateRandomString(20)
 
 	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("session", sessionID, (30 * 24 * 60 * 60), "/", c.Request.Host, false, true)
+	c.SetCookie("session", sessionID, (30 * 24 * 60 * 60), "/", c.Request.URL.Host, false, true)
 
 	_, err := uc.db.Collection("sessions").UpdateOne(uc.ctx, bson.D{{Key: "email", Value: user.Email}}, bson.M{
 		"$set": bson.M{

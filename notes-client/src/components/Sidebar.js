@@ -13,21 +13,20 @@ import {
   TextInput,
   Tooltip,
 } from "@mantine/core";
-import {
-  IconNote,
-  IconPlus,
-  IconTrash,
-} from "@tabler/icons-react";
+import { IconCheck, IconNote, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addNote,
   deleteNote,
   getNotesDecrypted,
+  getNotesError,
+  getNotesStatus,
   selectAllNotes,
 } from "../features/notes/notesSlice";
 import { getEncryptionKey } from "../features/auth/authSlice";
 import { IconFolderFilled } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { notifications } from "@mantine/notifications";
 
 const useStyles = createStyles((theme) => ({
   link: {
@@ -71,51 +70,184 @@ const useStyles = createStyles((theme) => ({
   },
 }));
 
-const Sidebar = ({ onSelectChange, selected }) => {
+const Sidebar = ({ onSelectChange, selected, searchInput }) => {
   const { classes, cx } = useStyles();
   const folders = useSelector(selectAllNotes);
+  const notesStatus = useSelector(getNotesStatus);
+  const notesError = useSelector(getNotesError);
   const dispatch = useDispatch();
   const key = useSelector(getEncryptionKey);
   const decrypted = useSelector(getNotesDecrypted);
   const [modalOpen, setModalOpen] = useState(false);
   const [newNoteData, setNewNoteData] = useState({ title: "", folder: "" });
-  const foldersWithNotes = folders.filter((folder) => folder.notes.length > 0);
+  const [selectedFolder, setSelectedFolder] = useState([]);
+
+  const filteredFolders = useMemo(() => {
+    return folders
+      .map((folder) => ({
+        ...folder,
+        notes: folder.notes.filter(
+          (note) =>
+            note.title.toLowerCase().includes(searchInput.toLowerCase()) ||
+            note.content.toLowerCase().includes(searchInput.toLowerCase())
+        ),
+      }))
+      .filter((folder) => folder.notes.length > 0);
+  }, [folders, searchInput]);
+
   const onCreateNew = (e) => {
     setModalOpen(true);
   };
 
   const generateFolderData = () => {
-    return foldersWithNotes.map((folder) => ({
+    return filteredFolders.map((folder) => ({
       value: folder.name,
       label: folder.name,
     }));
   };
 
-  const handleCreateNote = () => {
+  const handleCreateNote = async () => {
     const newNote = {
       content: "",
       title: newNoteData.title,
       datecreated: new Date().toISOString(),
       folder: newNoteData.folder,
     };
-    dispatch(addNote({ newNote, key }));
+    const addedNoteAction = await dispatch(addNote({ newNote, key }));
+    const addedNote = addedNoteAction.payload;
     setModalOpen(false);
     setNewNoteData({ title: "", folder: "" });
-  };
 
-  useEffect(() => {
-    if (folders.length > 0 && folders[0].notes.length > 0) {
-      onSelectChange(folders[0].notes[0]?.id);
+    // Automatically select the newly created note
+    onSelectChange(addedNote.id);
+
+    // Expand the folder accordion if the new note is inside a folder
+    if (newNote.folder !== "root") {
+      setSelectedFolder((prevFolders) => [...prevFolders, newNote.folder]);
     }
-  }, [folders]);
+  };
 
   const onDeleteClick = (e, id) => {
     e.stopPropagation();
     dispatch(deleteNote(id));
-    if (folders.length > 0 && folders[0].notes.length > 0) {
-      onSelectChange(folders[0].notes[0]?.id);
+
+    // Get the folder of the note being deleted
+    const folderOfDeletedNote = folders.find((folder) =>
+      folder.notes.some((note) => note.id === id)
+    );
+
+    // If there are other notes in the same folder, select the first one
+    if (folderOfDeletedNote && folderOfDeletedNote.notes.length > 1) {
+      const remainingNote = folderOfDeletedNote.notes.find(
+        (note) => note.id !== id
+      );
+      onSelectChange(remainingNote?.id);
+    } else {
+      // If no other notes in the same folder, select the first note in the root folder
+      const rootFolder = folders.find((folder) => folder.name === "root");
+      if (rootFolder && rootFolder.notes.length > 0) {
+        onSelectChange(rootFolder.notes[0]?.id);
+      }
     }
   };
+
+  useEffect(() => {
+    // If no note is selected, select the first note in the root folder
+    if (!selected) {
+      const rootFolder = folders.find((folder) => folder.name === "root");
+      if (rootFolder && rootFolder.notes.length > 0) {
+        onSelectChange(rootFolder.notes[0]?.id);
+      }
+    }
+  }, [folders, selected]);
+
+  useEffect(() => {
+    if (notesStatus === "fetching") {
+      notifications.clean();
+      notifications.show({
+        id: "load-notes",
+        loading: true,
+        title: "Fetching Notes",
+        message: "Please wait while we fetch your notes",
+        autoClose: false,
+        withCloseButton: false,
+      });
+    } else if (notesStatus === "fetched") {
+      notifications.update({
+        id: "load-notes",
+        color: "teal",
+        title: "Notes loaded successfully",
+        message: "Your request was successfull.",
+        icon: <IconCheck size="1rem" />,
+        autoClose: 1000,
+      });
+    } else if (notesStatus === "fetchRejected") {
+      notifications.update({
+        id: "load-notes",
+        color: "red",
+        title: "Request failed",
+        message: "Request has failed: " + notesError,
+        icon: <IconCheck size="1rem" />,
+        autoClose: 1000,
+      });
+    } else if (notesStatus === "adding") {
+      notifications.clean();
+      notifications.show({
+        id: "load-notes",
+        loading: true,
+        title: "Creating New Note",
+        message: "Please wait while we create new note",
+        autoClose: false,
+        withCloseButton: false,
+      });
+    } else if (notesStatus === "added") {
+      notifications.update({
+        id: "load-notes",
+        color: "teal",
+        title: "Note Created Successfully",
+        message: "Your request was successfull, Note has been created.",
+        icon: <IconCheck size="1rem" />,
+        autoClose: 1000,
+      });
+    } else if (notesStatus === "addRejected") {
+      notifications.update({
+        id: "load-notes",
+        color: "red",
+        title: "Request failed",
+        message: "Request has failed: " + notesError,
+        icon: <IconCheck size="1rem" />,
+        autoClose: 1000,
+      });
+    } else if (notesStatus === "deleting") {
+      notifications.clean();
+      notifications.show({
+        id: "load-notes",
+        loading: true,
+        title: "Deleting Note",
+        message: "Please wait while we delete the note",
+        autoClose: false,
+        withCloseButton: false,
+      });
+    } else if (notesStatus === "deleted") {
+      notifications.update({
+        id: "load-notes",
+        color: "teal",
+        title: "Note Deleted Successfully",
+        message: "Your request was successfull, Note has been deleted.",
+        icon: <IconCheck size="1rem" />,
+        autoClose: 1000,
+      });
+    } else if (notesStatus === "deleteRejected") {
+      notifications.update({
+        id: "load-notes",
+        color: "red",
+        title: "Request failed",
+        message: "Request has failed: " + notesError,
+        icon: <IconCheck size="1rem" />,
+        autoClose: 100,
+      });
+    }
+  }, [notesStatus]);
 
   const renderNote = (note) => (
     <Box
@@ -196,14 +328,18 @@ const Sidebar = ({ onSelectChange, selected }) => {
         </Tooltip>
       </Group>
       <Divider my="xs" variant="solid" style={{ marginBottom: "0px" }} />
-      {[...foldersWithNotes]
-        .sort((a, b) => (a.name === "root" ? 1 : -1))
-        .map((folder) =>
-          folder.name === "root" ? (
-            folder.notes.map(renderNote)
-          ) : (
-            <Accordion variant="default" radius="xs" key={folder.name}>
-              <Accordion.Item value={folder.name}>
+
+      <Accordion
+        variant="filled"
+        radius="xs"
+        multiple
+        value={selectedFolder}
+        onChange={setSelectedFolder}
+      >
+        {filteredFolders.map(
+          (folder) =>
+            folder.name !== "root" && (
+              <Accordion.Item value={folder.name} key={folder.name}>
                 <Accordion.Control icon={<IconFolderFilled />}>
                   {folder.name}
                 </Accordion.Control>
@@ -211,9 +347,13 @@ const Sidebar = ({ onSelectChange, selected }) => {
                   {decrypted ? folder.notes.map(renderNote) : ""}
                 </Accordion.Panel>
               </Accordion.Item>
-            </Accordion>
-          )
+            )
         )}
+      </Accordion>
+
+      {filteredFolders
+        .filter((folder) => folder.name === "root")
+        .map((folder) => folder.notes.map(renderNote))}
 
       <Modal
         opened={modalOpen}
@@ -228,19 +368,17 @@ const Sidebar = ({ onSelectChange, selected }) => {
             onChange={(event) =>
               setNewNoteData({ ...newNoteData, title: event.target.value })
             }
-            required
             fullWidth
           />
           <Autocomplete
             dropdownPosition="bottom"
             label="Folder"
-            placeholder="Enter folder name"
+            placeholder="Select existing folder or enter a new folder name"
             data={generateFolderData()}
             value={newNoteData.folder}
             onChange={(value) =>
               setNewNoteData({ ...newNoteData, folder: value })
             }
-            required
             fullWidth
             withinPortal
           />

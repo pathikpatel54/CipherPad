@@ -1,12 +1,16 @@
 package routes
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
+	"notes-app/config"
 	"notes-app/models"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -174,6 +178,66 @@ func (nc *NoteController) DeleteNote(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusNotFound, "")
+}
+
+func (nc *NoteController) OpenAICompletions(c *gin.Context) {
+	logged, _ := isLoggedIn(c, nc.db, nc.ctx)
+
+	if !logged {
+		c.String(http.StatusUnauthorized, "")
+		return
+	}
+
+	// Read the JSON payload from the request
+	var payload models.Prompt
+	err := c.BindJSON(&payload)
+	if err != nil {
+		c.String(http.StatusBadRequest, "Invalid JSON payload")
+		return
+	}
+	// Create the request body
+	requestBody := []byte(`{
+	  "model": "gpt-3.5-turbo",
+	  "messages": [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "` + strings.ReplaceAll(payload.Prompt, "\"", "") + `"}
+    ]}`)
+
+	// Create the HTTP client
+	client := &http.Client{}
+
+	// Create the API request
+	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer(requestBody))
+	if err != nil {
+		log.Println("Error creating request to OpenAI API: ", err)
+		c.String(http.StatusInternalServerError, "Error creating request to OpenAI API")
+		return
+	}
+
+	// Set the Authorization header with your OpenAI API key
+	req.Header.Set("Authorization", "Bearer "+config.Keys.OpenAI)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Make the request to the OpenAI API
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println("Error making request to OpenAI API: ", err)
+		c.String(http.StatusInternalServerError, "Error making request to OpenAI API")
+		return
+	}
+	defer resp.Body.Close()
+
+	// Read the response body
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Println("Error reading response from OpenAI API: ", err)
+		c.String(http.StatusInternalServerError, "Error reading response from OpenAI API")
+		return
+	}
+
+	// Set the response headers and body
+	c.Header("Content-Type", "application/json")
+	c.String(http.StatusOK, string(responseBody))
 }
 
 func newUpgrader(user *models.User, nc *NoteController) *websocket.Upgrader {

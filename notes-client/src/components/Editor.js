@@ -1,9 +1,9 @@
-import { useRef, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { selectAllNotes, syncNote } from "../features/notes/notesSlice";
 import { getEncryptionKey } from "../features/auth/authSlice";
 import { RichTextEditor, Link } from "@mantine/tiptap";
-import { useEditor } from "@tiptap/react";
+import { BubbleMenu, useEditor } from "@tiptap/react";
 import Highlight from "@tiptap/extension-highlight";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -11,16 +11,29 @@ import TextAlign from "@tiptap/extension-text-align";
 import Superscript from "@tiptap/extension-superscript";
 import SubScript from "@tiptap/extension-subscript";
 import Image from "@tiptap/extension-image";
-import { Textarea } from "@mantine/core";
+import { Color } from "@tiptap/extension-color";
+import TextStyle from "@tiptap/extension-text-style";
+import { Input, Modal, Text } from "@mantine/core";
 import useWebSocket from "../hooks/useWebSocket";
 import useDebounce from "../hooks/useDebounce";
+import { IconCheck, IconColorPicker } from "@tabler/icons-react";
+import {
+  getChatgptError,
+  getChatgptStatus,
+  requestPrompt,
+  selectAllAssistant,
+} from "../features/chatgpt/chatgptSlice";
+import { useDisclosure } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
 
 const Editor = ({ selected }) => {
   const [note, setNote] = useState(null);
   const notes = useSelector(selectAllNotes);
   const dispatch = useDispatch();
   const key = useSelector(getEncryptionKey);
-  const editorInitialized = useRef(false);
+  const chatgptResponse = useSelector(selectAllAssistant);
+  const chatgptStatus = useSelector(getChatgptStatus);
+  const chatgptError = useSelector(getChatgptError);
 
   const handleIncomingMessage = (message) => {
     console.log(message);
@@ -41,6 +54,8 @@ const Editor = ({ selected }) => {
       Highlight,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Image,
+      TextStyle,
+      Color,
     ],
     content: note?.content,
     onUpdate({ editor }) {
@@ -85,20 +100,61 @@ const Editor = ({ selected }) => {
     }
   }, [debouncedContent, debouncedTitle]);
 
+  useEffect(() => {
+    if (chatgptResponse?.choices) {
+      editor.commands.insertContent("<br /><br />");
+      editor.commands.insertContent(
+        chatgptResponse?.choices[0]?.message?.content
+          .replace(/\n/g, "<br />")
+          .replace(/```(.*?)```/g, "<pre><code>$1</code></pre>")
+          .replace(/`(.*?)`/g, "<code>$1</code>")
+      );
+    }
+  }, [chatgptResponse]);
+
+  useEffect(() => {
+    if (chatgptStatus === "pending") {
+      notifications.clean();
+      notifications.show({
+        id: "load-chatgpt",
+        loading: true,
+        title: "Getting Assistance",
+        message: "Please wait while we get a response from AI",
+        autoClose: false,
+        withCloseButton: false,
+      });
+    } else if (chatgptStatus === "fulfilled") {
+      notifications.update({
+        id: "load-chatgpt",
+        color: "teal",
+        title: "Response Received",
+        message: "Your request was successfull, AI response has been added.",
+        icon: <IconCheck size="1rem" />,
+        autoClose: 1000,
+      });
+    } else if (chatgptStatus === "rejected") {
+      notifications.update({
+        id: "load-chatgpt",
+        color: "red",
+        title: "Request failed",
+        message: "Request has failed: " + chatgptError,
+        icon: <IconCheck size="1rem" />,
+        autoClose: 3000,
+      });
+    }
+  }, [chatgptStatus]);
+
   return (
     <>
       {!note ? (
         <></>
       ) : (
         <RichTextEditor editor={editor} className="rte">
-          <RichTextEditor.Toolbar>
-            <Textarea
+          <RichTextEditor.Toolbar pt={5} pb={5}>
+            <Input
+              variant="unstyled"
               placeholder="Untitled Note"
-              variant={"unstyled"}
-              w={"100%"}
-              size={"xl"}
-              maxRows={1}
-              mah={"50px"}
+              size="lg"
               value={note.title || ""}
               onChange={(event) => {
                 setNote((prev) => ({
@@ -106,11 +162,31 @@ const Editor = ({ selected }) => {
                   title: event.target.value,
                 }));
               }}
-              style={{ overflow: "hidden", maxWidth: "800px" }}
+              w="100%"
             />
           </RichTextEditor.Toolbar>
           <RichTextEditor.Toolbar sticky stickyOffset={60}>
             <RichTextEditor.ControlsGroup>
+              <RichTextEditor.Control
+                onClick={() => {
+                  const { view, state } = editor;
+                  const { from, to } = view.state.selection;
+                  const text = state.doc.textBetween(from, to, "");
+                  if (text != "") {
+                    dispatch(
+                      requestPrompt({
+                        prompt: text,
+                      })
+                    );
+                  }
+                  editor.commands.setTextSelection(to);
+                }}
+                aria-label="Get AI Assistance"
+                title="Get AI Assistance"
+                p={10}
+              >
+                Get AI Assistance
+              </RichTextEditor.Control>
               <RichTextEditor.Bold />
               <RichTextEditor.Italic />
               <RichTextEditor.Underline />
@@ -147,6 +223,37 @@ const Editor = ({ selected }) => {
               <RichTextEditor.AlignJustify />
               <RichTextEditor.AlignRight />
             </RichTextEditor.ControlsGroup>
+            <RichTextEditor.ColorPicker
+              colors={[
+                "#25262b",
+                "#868e96",
+                "#fa5252",
+                "#e64980",
+                "#be4bdb",
+                "#7950f2",
+                "#4c6ef5",
+                "#228be6",
+                "#15aabf",
+                "#12b886",
+                "#40c057",
+                "#82c91e",
+                "#fab005",
+                "#fd7e14",
+              ]}
+            />
+
+            <RichTextEditor.ControlsGroup>
+              <RichTextEditor.Control interactive={false}>
+                <IconColorPicker size="1rem" stroke={1.5} />
+              </RichTextEditor.Control>
+              <RichTextEditor.Color color="#F03E3E" />
+              <RichTextEditor.Color color="#7048E8" />
+              <RichTextEditor.Color color="#1098AD" />
+              <RichTextEditor.Color color="#37B24D" />
+              <RichTextEditor.Color color="#F59F00" />
+            </RichTextEditor.ControlsGroup>
+
+            <RichTextEditor.UnsetColor />
           </RichTextEditor.Toolbar>
 
           <RichTextEditor.Content className="rte-content" />

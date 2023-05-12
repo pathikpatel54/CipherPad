@@ -11,15 +11,16 @@ import {
   Transition,
   Autocomplete,
   ScrollArea,
+  TextInput,
+  CloseButton,
 } from "@mantine/core";
 import Head from "./Head";
 import Editor from "./Editor";
 
 import Sidebar from "./Sidebar";
-import { IconSearch } from "@tabler/icons-react";
+import { IconClearAll, IconSearch, IconX } from "@tabler/icons-react";
 import { fetchNotes, getNotesDecrypted } from "../features/notes/notesSlice";
 import { useDispatch, useSelector } from "react-redux";
-import { useDisclosure } from "@mantine/hooks";
 import { getEncryptionKey } from "../features/auth/authSlice";
 
 const useStyles = createStyles((theme) => ({
@@ -52,7 +53,8 @@ export default function Landing() {
   const decrypted = useSelector(getNotesDecrypted);
   const key = useSelector(getEncryptionKey);
   const dispatch = useDispatch();
-
+  const [searchInput, setSearchInput] = useState("");
+  console.log(searchInput);
   const onSelectChange = (id) => {
     setSelected(id);
   };
@@ -93,18 +95,18 @@ export default function Landing() {
               }}
             >
               <Navbar.Section>
-                <Autocomplete
+                <TextInput
                   placeholder="Search"
                   icon={<IconSearch size="1rem" stroke={1.5} />}
-                  data={[
-                    "React",
-                    "Angular",
-                    "Vue",
-                    "Next.js",
-                    "Riot.js",
-                    "Svelte",
-                    "Blitz.js",
-                  ]}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  value={searchInput}
+                  rightSection={
+                    searchInput === "" ? (
+                      <></>
+                    ) : (
+                      <CloseButton onClick={() => setSearchInput("")} />
+                    )
+                  }
                 />
               </Navbar.Section>
               <Navbar.Section
@@ -113,7 +115,11 @@ export default function Landing() {
                 className={classes.section}
                 component={ScrollArea}
               >
-                <Sidebar onSelectChange={onSelectChange} selected={selected} />
+                <Sidebar
+                  onSelectChange={onSelectChange}
+                  selected={selected}
+                  searchInput={searchInput}
+                />
               </Navbar.Section>
             </Navbar>
           )}

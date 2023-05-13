@@ -13,7 +13,7 @@ import SubScript from "@tiptap/extension-subscript";
 import Image from "@tiptap/extension-image";
 import { Color } from "@tiptap/extension-color";
 import TextStyle from "@tiptap/extension-text-style";
-import { Input, Modal, Text } from "@mantine/core";
+import { Center, Input, Modal, Text, Title } from "@mantine/core";
 import useWebSocket from "../hooks/useWebSocket";
 import useDebounce from "../hooks/useDebounce";
 import { IconCheck, IconColorPicker, IconWand } from "@tabler/icons-react";
@@ -147,7 +147,20 @@ const Editor = ({ selected }) => {
   return (
     <>
       {!note ? (
-        <></>
+        <>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "100%",
+            }}
+          >
+            <Title style={{ textAlign: "center" }} order={3}>
+              Select note or create new note from left sidebar
+            </Title>
+          </div>
+        </>
       ) : (
         <RichTextEditor editor={editor} className="rte">
           <RichTextEditor.Toolbar pt={5} pb={5}>

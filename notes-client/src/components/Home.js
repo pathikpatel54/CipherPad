@@ -14,6 +14,7 @@ import {
   SimpleGrid,
   Paper,
   Anchor,
+  Center,
 } from "@mantine/core";
 import Head from "./Head";
 import {
@@ -328,7 +329,20 @@ export default function Home() {
           </div>
         </Container>
       </Paper>
+      <Paper>
+        <Container>
+          <Title order={2} style={{ textAlign: "center" }} pt={20} pb={20}>
+            How It works?
+          </Title>
 
+          <div class="video-container">
+            <video controls>
+              <source src="AppDemo.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </Container>
+      </Paper>
       <div className={classes.footer}>
         <Container className={classes.inner1}>
           <Image src="logo.svg" maw={170} />

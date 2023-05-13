@@ -117,13 +117,17 @@ func (nc *NoteController) NewNote(c *gin.Context) {
 		note.Folder = "root"
 	}
 
-	// Upsert a folder with the given name, if it doesn't exist.
+	// Upsert a folder with the given name and author, if it doesn't exist.
 	_, err := nc.db.Collection("folders").UpdateOne(
 		nc.ctx,
-		bson.D{{Key: "name", Value: note.Folder}},
+		bson.D{
+			{Key: "name", Value: note.Folder},
+			{Key: "author", Value: user.Email},
+		},
 		bson.D{{Key: "$setOnInsert", Value: bson.D{{Key: "author", Value: user.Email}}}},
 		options.Update().SetUpsert(true),
 	)
+
 	if err != nil {
 		log.Println("Error upserting Folder: ", err)
 		c.String(http.StatusInternalServerError, "")

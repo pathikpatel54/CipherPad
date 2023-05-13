@@ -86,7 +86,7 @@ const Editor = ({ selected }) => {
     }
   }, [selected, notes, editor]);
 
-  const debouncedContent = useDebounce(note?.content, 1000);
+  const debouncedContent = useDebounce(note?.content, 500);
   const debouncedTitle = useDebounce(note?.title, 1);
 
   useEffect(() => {

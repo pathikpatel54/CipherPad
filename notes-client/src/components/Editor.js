@@ -102,12 +102,13 @@ const Editor = ({ selected }) => {
 
   useEffect(() => {
     if (chatgptResponse?.choices) {
-      editor.commands.insertContent("<br /><br />");
       editor.commands.insertContent(
-        chatgptResponse?.choices[0]?.message?.content
-          .replace(/\n/g, "<br />")
-          .replace(/```(.*?)```/g, "<pre><code>$1</code></pre>")
-          .replace(/`(.*?)`/g, "<code>$1</code>")
+        "<p>" +
+          chatgptResponse?.choices[0]?.message?.content
+            .replace(/\n\n/g, "</p><p>")
+            .replace(/```(.*?)```/g, "<pre><code>$1</code></pre>")
+            .replace(/`(.*?)`/g, "<code>$1</code>") +
+          "</p>"
       );
     }
   }, [chatgptResponse]);

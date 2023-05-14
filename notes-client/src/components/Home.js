@@ -26,6 +26,7 @@ import {
   IconWand,
 } from "@tabler/icons-react";
 import { useRef } from "react";
+import Logo from "./Logo";
 
 const features = [
   {
@@ -226,7 +227,7 @@ export default function Home() {
       <Header height={{ base: 60, md: 60 }} p="xl" mb={70}>
         <div className={classes.inner}>
           <Group>
-            <Image src="logo.svg" maw={150} />
+            <Logo />
           </Group>
           <Head ref={childRef} />
         </div>

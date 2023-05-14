@@ -185,10 +185,16 @@ const Editor = ({ selected }) => {
                   const { view, state } = editor;
                   const { from, to } = view.state.selection;
                   const text = state.doc.textBetween(from, to, "");
-                  if (text != "") {
+                  if (text !== "") {
                     dispatch(
                       requestPrompt({
                         prompt: text,
+                      })
+                    );
+                  } else {
+                    dispatch(
+                      requestPrompt({
+                        prompt: `Provide 200 words about ${note.title}`,
                       })
                     );
                   }

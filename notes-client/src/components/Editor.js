@@ -2,8 +2,13 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { selectAllNotes, syncNote } from "../features/notes/notesSlice";
 import { getEncryptionKey } from "../features/auth/authSlice";
-import { RichTextEditor, Link } from "@mantine/tiptap";
+import {
+  RichTextEditor,
+  Link,
+  useRichTextEditorContext,
+} from "@mantine/tiptap";
 import { BubbleMenu, useEditor } from "@tiptap/react";
+
 import Highlight from "@tiptap/extension-highlight";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -16,7 +21,14 @@ import TextStyle from "@tiptap/extension-text-style";
 import { Center, Input, Modal, Text, Title } from "@mantine/core";
 import useWebSocket from "../hooks/useWebSocket";
 import useDebounce from "../hooks/useDebounce";
-import { IconCheck, IconColorPicker, IconWand } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconColorPicker,
+  IconList,
+  IconTable,
+  IconTableOff,
+  IconWand,
+} from "@tabler/icons-react";
 import {
   getChatgptError,
   getChatgptStatus,
@@ -25,6 +37,11 @@ import {
 } from "../features/chatgpt/chatgptSlice";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
+
+import Table from "@tiptap/extension-table";
+import TableRow from "@tiptap/extension-table-row";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
 
 const Editor = ({ selected }) => {
   const [note, setNote] = useState(null);
@@ -56,6 +73,10 @@ const Editor = ({ selected }) => {
       Image,
       TextStyle,
       Color,
+      Table.configure({ resizable: true }), // add table extension here
+      TableRow, // add table row extension here
+      TableCell, // add table cell extension here
+      TableHeader, // add table header extension here
     ],
     content: note?.content,
     onUpdate({ editor }) {
@@ -145,6 +166,34 @@ const Editor = ({ selected }) => {
     }
   }, [chatgptStatus]);
 
+  function InsertTableControl() {
+    const { editor } = useRichTextEditorContext();
+    return (
+      <RichTextEditor.Control
+        onClick={() => {
+          editor.chain().focus().insertTable().run();
+        }}
+        aria-label="Insert Table"
+        title="Insert Table"
+      >
+        <IconTable stroke={1.5} size="1rem" />
+      </RichTextEditor.Control>
+    );
+  }
+
+  function DeleteTableControl() {
+    const { editor } = useRichTextEditorContext();
+    return (
+      <RichTextEditor.Control
+        onClick={() => editor.chain().focus().deleteTable().run()}
+        aria-label="Delete Table"
+        title="Delete Table"
+      >
+        <IconTableOff stroke={1.5} size="1rem" />
+      </RichTextEditor.Control>
+    );
+  }
+
   return (
     <>
       {!note ? (
@@ -227,6 +276,7 @@ const Editor = ({ selected }) => {
               <RichTextEditor.Hr />
               <RichTextEditor.BulletList />
               <RichTextEditor.OrderedList />
+
               <RichTextEditor.Subscript />
               <RichTextEditor.Superscript />
             </RichTextEditor.ControlsGroup>
@@ -241,6 +291,10 @@ const Editor = ({ selected }) => {
               <RichTextEditor.AlignCenter />
               <RichTextEditor.AlignJustify />
               <RichTextEditor.AlignRight />
+            </RichTextEditor.ControlsGroup>
+            <RichTextEditor.ControlsGroup>
+              <InsertTableControl />
+              <DeleteTableControl />
             </RichTextEditor.ControlsGroup>
             <RichTextEditor.ColorPicker
               colors={[
